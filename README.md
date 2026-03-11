@@ -1,8 +1,8 @@
-# BreadioBot 🍞
+# DiscordVerifyBot 🔐
 
 **Open-source Discord NFT verification bot for any EVM chain.**
 
-Verify NFT holdings → assign Discord roles automatically. Works with Ethereum, MegaETH, Base, Polygon, Arbitrum, or any EVM-compatible chain.
+Verify NFT holdings → assign Discord roles automatically. Works with Ethereum, Base, Polygon, Arbitrum, or any EVM-compatible chain.
 
 ## How It Works
 
@@ -37,8 +37,8 @@ User clicks "Verify" → Connects Wallet → Authorizes Discord → Signs Messag
 ### 1. Clone & Configure
 
 ```bash
-git clone https://github.com/tut9492/BreadioBot.git
-cd BreadioBot/BreadioBot
+git clone https://github.com/tut9492/DiscordVerifyBot.git
+cd DiscordVerifyBot
 ```
 
 Edit `config.json` with your chains, collections, and Discord role IDs:
@@ -54,8 +54,6 @@ Edit `config.json` with your chains, collections, and Discord role IDs:
     },
     {
       "id": 4326,
-      "rpc": "https://megaeth.drpc.org",
-      "name": "MegaETH"
     }
   ],
   "collections": [
@@ -86,7 +84,7 @@ Edit `config.json` with your chains, collections, and Discord role IDs:
 
 ### 3. Deploy to Vercel
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/tut9492/BreadioBot/tree/main/BreadioBot)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/import/project?template=https://github.com/tut9492/DiscordVerifyBot)
 
 Set these environment variables:
 
@@ -98,7 +96,6 @@ Set these environment variables:
 | `VERIFICATION_URL` | ❌ | Base URL override (auto-detected) |
 | `DISCORD_GUILD_ID` | ❌ | Override guild_id from config.json |
 | `ETHEREUM_RPC` | ❌ | Override Ethereum RPC from config |
-| `MEGAETH_RPC` | ❌ | Override MegaETH RPC from config |
 
 ### 4. Done!
 
@@ -173,10 +170,19 @@ Then reference `chain_id: 8453` in your collections. That's it.
 
 ## Security
 
-- Wallet ownership verified via signed message with 5-minute expiry
+- Wallet ownership verified via EIP-191 signed message with 5-minute expiry
 - Discord identity verified via OAuth2 token exchange
+- Discord token validated server-side (prevents spoofed user IDs)
 - Bot token stays server-side only
 - No data stored — all verification is real-time
+- Fully stateless — no database, no session cookies
+
+### Recommendations for production
+
+- Set `VERIFICATION_URL` explicitly instead of relying on `Host` header
+- Restrict CORS origin in `api/complete.js` to your domain (default is `*`)
+- Use a private/paid RPC to avoid rate limits on public endpoints
+- Consider adding rate limiting via Vercel Edge Config or middleware
 
 ## License
 

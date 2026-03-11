@@ -5,11 +5,6 @@
       "id": 1,
       "rpc": "https://ethereum-rpc.publicnode.com",
       "name": "Ethereum"
-    },
-    {
-      "id": 4326,
-      "rpc": "https://megaeth.drpc.org",
-      "name": "MegaETH"
     }
   ],
   "collections": [

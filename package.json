@@ -1,5 +1,5 @@
 {
-  "name": "breadiobot",
+  "name": "discord-verify-bot",
   "version": "1.0.0",
   "description": "Serverless Discord NFT verification bot — EVM compatible, multi-chain, multi-collection",
   "license": "MIT",

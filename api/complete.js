@@ -55,7 +55,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Signature expired. Please try again.' });
     }
 
-    // Verify signature — generic message (no project-specific branding)
+    // Verify the Discord access token actually belongs to this user
+    const discordUserRes = await fetch('https://discord.com/api/v10/users/@me', {
+      headers: { Authorization: `Bearer ${discord_access_token}` },
+    });
+
+    if (!discordUserRes.ok) {
+      return res.status(401).json({ error: 'Invalid Discord token. Please re-authorize.' });
+    }
+
+    const discordUser = await discordUserRes.json();
+    if (discordUser.id !== discord_user_id) {
+      return res.status(403).json({ error: 'Discord token does not match user ID.' });
+    }
+
+    // Verify wallet signature
     const message = `Verify NFT holdings for Discord: ${discord_user_id}\nTimestamp: ${timestamp}`;
     const valid = await verifyMessage({ address: wallet, message, signature });
 
