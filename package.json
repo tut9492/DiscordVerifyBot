@@ -1,0 +1,11 @@
+{
+  "name": "breadiobot",
+  "version": "1.0.0",
+  "description": "Serverless Discord NFT verification bot — EVM compatible, multi-chain, multi-collection",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "type": "module"
+}

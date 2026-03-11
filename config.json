@@ -1,0 +1,26 @@
+{
+  "guild_id": "YOUR_DISCORD_SERVER_ID",
+  "chains": [
+    {
+      "id": 1,
+      "rpc": "https://ethereum-rpc.publicnode.com",
+      "name": "Ethereum"
+    },
+    {
+      "id": 4326,
+      "rpc": "https://megaeth.drpc.org",
+      "name": "MegaETH"
+    }
+  ],
+  "collections": [
+    {
+      "name": "My NFT Collection",
+      "contract": "0x0000000000000000000000000000000000000000",
+      "chain_id": 1,
+      "roles": [
+        { "min": 1, "role_id": "DISCORD_ROLE_ID", "name": "Holder" },
+        { "min": 10, "role_id": "DISCORD_ROLE_ID", "name": "Whale" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NFT Verification</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0f;
+      color: #e0e0e8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .container {
+      max-width: 480px;
+      width: 100%;
+      background: #13131a;
+      border: 1px solid #2a2a3a;
+      border-radius: 16px;
+      padding: 40px 32px;
+    }
+    h1 {
+      font-size: 24px;
+      text-align: center;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #7c5cff, #5ca0ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+    .steps {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 32px;
+      justify-content: center;
+    }
+    .step {
+      width: 40px; height: 4px;
+      border-radius: 2px;
+      background: #2a2a3a;
+      transition: background 0.3s;
+    }
+    .step.active { background: #7c5cff; }
+    .step.done { background: #5cff8a; }
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 12px;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary {
+      background: linear-gradient(135deg, #7c5cff, #5c7cff);
+      color: white;
+    }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,92,255,0.3); }
+    .btn-discord { background: #5865F2; color: white; }
+    .btn-discord:hover:not(:disabled) { background: #4752c4; }
+    .btn-success { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; }
+    .status-card {
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .status-card .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+    .status-card .value { font-size: 14px; margin-top: 4px; word-break: break-all; }
+    .status-card .value.connected { color: #5cff8a; }
+    .results { margin-top: 16px; }
+    .role-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    .role-badge {
+      background: #7c5cff;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .role-info { font-size: 13px; color: #aaa; }
+    .error {
+      background: #2a1520;
+      border: 1px solid #ff5c5c;
+      color: #ff8a8a;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+    }
+    .no-roles {
+      text-align: center;
+      color: #888;
+      padding: 20px;
+      font-size: 14px;
+    }
+    .spinner {
+      display: inline-block;
+      width: 18px; height: 18px;
+      border: 2px solid #fff4;
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none; }
+    .holdings-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 8px;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+    .holdings-count { color: #7c5cff; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔐 NFT Verification</h1>
+    <p class="subtitle">Verify your NFT holdings for Discord roles</p>
+
+    <div class="steps">
+      <div class="step" id="step1"></div>
+      <div class="step" id="step2"></div>
+      <div class="step" id="step3"></div>
+    </div>
+
+    <div id="errorBox" class="error hidden"></div>
+
+    <div id="walletSection">
+      <button class="btn btn-primary" id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+      <div id="walletInfo" class="status-card hidden">
+        <div class="label">Wallet</div>
+        <div class="value connected" id="walletAddress"></div>
+      </div>
+    </div>
+
+    <div id="discordSection">
+      <button class="btn btn-discord" id="discordBtn" disabled onclick="startDiscordOAuth()">🎮 Connect Discord</button>
+      <div id="discordInfo" class="status-card hidden">
+        <div class="label">Discord</div>
+        <div class="value connected" id="discordUsername"></div>
+      </div>
+    </div>
+
+    <button class="btn btn-success" id="verifyBtn" disabled onclick="signAndVerify()">✅ Sign & Verify</button>
+
+    <div id="resultsSection" class="results hidden">
+      <div id="holdingsResults"></div>
+      <div id="rolesResults"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+  <script>
+    let wallet = null;
+    let discordToken = null;
+    let discordUserId = null;
+
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get('error')) {
+      showError('Discord authorization failed: ' + params.get('error'));
+    }
+
+    if (params.get('access_token')) {
+      discordToken = params.get('access_token');
+      discordUserId = params.get('discord_user_id');
+      const username = params.get('discord_username');
+
+      document.getElementById('discordBtn').classList.add('hidden');
+      document.getElementById('discordInfo').classList.remove('hidden');
+      document.getElementById('discordUsername').textContent = username || discordUserId;
+      document.getElementById('step2').classList.add('done');
+
+      window.history.replaceState({}, '', window.location.pathname);
+      updateVerifyBtn();
+    }
+
+    function showError(msg) {
+      const box = document.getElementById('errorBox');
+      box.textContent = msg;
+      box.classList.remove('hidden');
+    }
+
+    function clearError() {
+      document.getElementById('errorBox').classList.add('hidden');
+    }
+
+    function updateSteps() {
+      document.getElementById('step1').className = 'step' + (wallet ? ' done' : ' active');
+      document.getElementById('step2').className = 'step' + (discordToken ? ' done' : wallet ? ' active' : '');
+      document.getElementById('step3').className = 'step' + (wallet && discordToken ? ' active' : '');
+    }
+
+    function updateVerifyBtn() {
+      document.getElementById('verifyBtn').disabled = !(wallet && discordToken);
+      document.getElementById('discordBtn').disabled = !wallet;
+      updateSteps();
+    }
+
+    async function connectWallet() {
+      clearError();
+      if (!window.ethereum) {
+        showError('No wallet detected. Please install MetaMask or another EVM wallet.');
+        return;
+      }
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        wallet = await signer.getAddress();
+
+        document.getElementById('connectBtn').classList.add('hidden');
+        document.getElementById('walletInfo').classList.remove('hidden');
+        document.getElementById('walletAddress').textContent = wallet.slice(0, 6) + '...' + wallet.slice(-4);
+        document.getElementById('step1').classList.add('done');
+        updateVerifyBtn();
+      } catch (err) {
+        showError('Failed to connect wallet: ' + err.message);
+      }
+    }
+
+    function startDiscordOAuth() {
+      window.location.href = '/api/verify';
+    }
+
+    async function signAndVerify() {
+      clearError();
+      const btn = document.getElementById('verifyBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Verifying...';
+
+      try {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const timestamp = Math.floor(Date.now() / 1000);
+        const message = `Verify NFT holdings for Discord: ${discordUserId}\nTimestamp: ${timestamp}`;
+        const signature = await signer.signMessage(message);
+
+        const res = await fetch('/api/complete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet,
+            signature,
+            discord_user_id: discordUserId,
+            discord_access_token: discordToken,
+            timestamp,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          showError(data.error || 'Verification failed');
+          btn.disabled = false;
+          btn.textContent = '✅ Sign & Verify';
+          return;
+        }
+
+        btn.classList.add('hidden');
+        const resultsSection = document.getElementById('resultsSection');
+        resultsSection.classList.remove('hidden');
+
+        let holdingsHtml = '<h3 style="margin-bottom:8px;font-size:14px;color:#888">HOLDINGS</h3>';
+        for (const h of data.holdings) {
+          holdingsHtml += `<div class="holdings-item"><span>${h.collection}</span><span class="holdings-count">${h.count}</span></div>`;
+        }
+        document.getElementById('holdingsResults').innerHTML = holdingsHtml;
+
+        let rolesHtml = '<h3 style="margin:16px 0 8px;font-size:14px;color:#888">ROLES ASSIGNED</h3>';
+        if (data.roles_assigned.length === 0) {
+          rolesHtml += '<div class="no-roles">No qualifying roles found. You need to hold NFTs from the supported collections.</div>';
+        } else {
+          for (const r of data.roles_assigned) {
+            rolesHtml += `<div class="role-item"><span class="role-badge">${r.role}</span><span class="role-info">${r.collection} · ${r.count} held</span></div>`;
+          }
+        }
+        document.getElementById('rolesResults').innerHTML = rolesHtml;
+        document.getElementById('step3').classList.add('done');
+
+      } catch (err) {
+        showError('Error: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = '✅ Sign & Verify';
+      }
+    }
+
+    updateSteps();
+  </script>
+</body>
+</html>
