@@ -51,9 +51,6 @@ Edit `config.json` with your chains, collections, and Discord role IDs:
       "id": 1,
       "rpc": "https://ethereum-rpc.publicnode.com",
       "name": "Ethereum"
-    },
-    {
-      "id": 4326,
     }
   ],
   "collections": [
@@ -93,8 +90,9 @@ Set these environment variables:
 | `DISCORD_BOT_TOKEN` | ✅ | Bot token from step 2 |
 | `DISCORD_CLIENT_ID` | ✅ | OAuth2 application client ID |
 | `DISCORD_CLIENT_SECRET` | ✅ | OAuth2 client secret |
-| `VERIFICATION_URL` | ❌ | Base URL override (auto-detected) |
+| `VERIFICATION_URL` | ❌ | Base URL override (auto-detected from Host header) |
 | `DISCORD_GUILD_ID` | ❌ | Override guild_id from config.json |
+| `ALLOWED_ORIGIN` | ❌ | CORS origin for API (set to your domain in production) |
 | `ETHEREUM_RPC` | ❌ | Override Ethereum RPC from config |
 
 ### 4. Done!
@@ -106,7 +104,8 @@ Share your verification URL with your community. Users click → connect wallet 
 | Endpoint | Method | Description |
 |---|---|---|
 | `/api/verify` | GET | Starts Discord OAuth2 flow |
-| `/api/callback` | GET | Discord OAuth2 callback |
+| `/api/callback` | GET | Discord OAuth2 callback (stores token server-side) |
+| `/api/token-exchange` | POST | Exchange one-time code for Discord token |
 | `/api/complete` | POST | Verifies wallet, checks holdings, assigns roles |
 
 ### POST `/api/complete`
@@ -170,17 +169,22 @@ Then reference `chain_id: 8453` in your collections. That's it.
 
 ## Security
 
-- Wallet ownership verified via EIP-191 signed message with 5-minute expiry
-- Discord identity verified via OAuth2 token exchange
-- Discord token validated server-side (prevents spoofed user IDs)
-- Bot token stays server-side only
-- No data stored — all verification is real-time
-- Fully stateless — no database, no session cookies
+- **OAuth tokens never in URLs** — Discord tokens are stored server-side in a short-lived map and exchanged via a one-time opaque code (60s TTL, single use)
+- **Wallet ownership** verified via EIP-191 signed message with 5-minute expiry
+- **Discord identity** verified server-side — token is validated against `/users/@me` to prevent spoofed user IDs
+- **CORS lockdown** — set `ALLOWED_ORIGIN` env var to restrict API access to your domain
+- **Host header hardened** — validated before use as fallback; `VERIFICATION_URL` recommended for production
+- **CDN integrity** — ethers.js loaded with Subresource Integrity (SRI) hash
+- **XSS safe** — all dynamic content rendered via `textContent` / DOM APIs, no `innerHTML` with untrusted data
+- **No internal error leaks** — server errors return generic messages; details logged server-side only
+- **Bot token** stays server-side only
+- **Deterministic deps** — `package-lock.json` committed for reproducible installs
+- **Fully stateless** — no database, no session cookies
 
 ### Recommendations for production
 
-- Set `VERIFICATION_URL` explicitly instead of relying on `Host` header
-- Restrict CORS origin in `api/complete.js` to your domain (default is `*`)
+- Set `VERIFICATION_URL` explicitly (don't rely on `Host` header)
+- Set `ALLOWED_ORIGIN` to your domain (e.g. `https://verify.example.com`)
 - Use a private/paid RPC to avoid rate limits on public endpoints
 - Consider adding rate limiting via Vercel Edge Config or middleware
 

@@ -13,7 +13,7 @@ const ERC721_ABI = [
 ];
 
 function cors(res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', process.env.ALLOWED_ORIGIN || '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
@@ -82,7 +82,8 @@ export default async function handler(req, res) {
     const botToken = process.env.DISCORD_BOT_TOKEN;
 
     if (!botToken) {
-      return res.status(500).json({ error: 'Server misconfigured: missing bot token' });
+      console.error('DISCORD_BOT_TOKEN is not set');
+      return res.status(500).json({ error: 'Internal server error.' });
     }
 
     const rolesAssigned = [];
@@ -149,6 +150,6 @@ export default async function handler(req, res) {
     });
   } catch (err) {
     console.error('Complete error:', err);
-    return res.status(500).json({ error: 'Internal server error. Please try again.' });
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 }

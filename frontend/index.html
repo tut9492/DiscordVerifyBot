@@ -64,10 +64,7 @@
       margin-bottom: 12px;
     }
     .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-primary {
-      background: linear-gradient(135deg, #7c5cff, #5c7cff);
-      color: white;
-    }
+    .btn-primary { background: linear-gradient(135deg, #7c5cff, #5c7cff); color: white; }
     .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,92,255,0.3); }
     .btn-discord { background: #5865F2; color: white; }
     .btn-discord:hover:not(:disabled) { background: #4752c4; }
@@ -179,7 +176,9 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"
+          integrity="sha384-ro/pNP1sfmhdbpq60NKzKAYve9JahlgCklXcKvudVEd/osRAYz2RlPG5TvB7Q04t"
+          crossorigin="anonymous"></script>
   <script>
     let wallet = null;
     let discordToken = null;
@@ -191,18 +190,37 @@
       showError('Discord authorization failed: ' + params.get('error'));
     }
 
-    if (params.get('access_token')) {
-      discordToken = params.get('access_token');
-      discordUserId = params.get('discord_user_id');
-      const username = params.get('discord_username');
-
-      document.getElementById('discordBtn').classList.add('hidden');
-      document.getElementById('discordInfo').classList.remove('hidden');
-      document.getElementById('discordUsername').textContent = username || discordUserId;
-      document.getElementById('step2').classList.add('done');
-
+    // Exchange one-time code for token data (never in URL)
+    if (params.get('code')) {
       window.history.replaceState({}, '', window.location.pathname);
-      updateVerifyBtn();
+      exchangeCode(params.get('code'));
+    }
+
+    async function exchangeCode(code) {
+      try {
+        const res = await fetch('/api/token-exchange', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+
+        if (!res.ok) {
+          showError('Discord session expired. Please try again.');
+          return;
+        }
+
+        const data = await res.json();
+        discordToken = data.access_token;
+        discordUserId = data.discord_user_id;
+
+        document.getElementById('discordBtn').classList.add('hidden');
+        document.getElementById('discordInfo').classList.remove('hidden');
+        document.getElementById('discordUsername').textContent = data.discord_username || discordUserId;
+        document.getElementById('step2').classList.add('done');
+        updateVerifyBtn();
+      } catch (err) {
+        showError('Failed to exchange Discord code: ' + err.message);
+      }
     }
 
     function showError(msg) {
@@ -252,6 +270,47 @@
       window.location.href = '/api/verify';
     }
 
+    // Safe DOM helpers (no innerHTML with untrusted data)
+    function createHoldingItem(name, count) {
+      const div = document.createElement('div');
+      div.className = 'holdings-item';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = name;
+
+      const countSpan = document.createElement('span');
+      countSpan.className = 'holdings-count';
+      countSpan.textContent = count;
+
+      div.appendChild(nameSpan);
+      div.appendChild(countSpan);
+      return div;
+    }
+
+    function createRoleItem(roleName, collectionName, count) {
+      const div = document.createElement('div');
+      div.className = 'role-item';
+
+      const badge = document.createElement('span');
+      badge.className = 'role-badge';
+      badge.textContent = roleName;
+
+      const info = document.createElement('span');
+      info.className = 'role-info';
+      info.textContent = collectionName + ' · ' + count + ' held';
+
+      div.appendChild(badge);
+      div.appendChild(info);
+      return div;
+    }
+
+    function createSectionHeader(text) {
+      const h3 = document.createElement('h3');
+      h3.style.cssText = 'margin: 16px 0 8px; font-size: 14px; color: #888;';
+      h3.textContent = text;
+      return h3;
+    }
+
     async function signAndVerify() {
       clearError();
       const btn = document.getElementById('verifyBtn');
@@ -290,21 +349,30 @@
         const resultsSection = document.getElementById('resultsSection');
         resultsSection.classList.remove('hidden');
 
-        let holdingsHtml = '<h3 style="margin-bottom:8px;font-size:14px;color:#888">HOLDINGS</h3>';
+        // Holdings — safe DOM construction
+        const holdingsContainer = document.getElementById('holdingsResults');
+        holdingsContainer.innerHTML = '';
+        const holdingsHeader = createSectionHeader('HOLDINGS');
+        holdingsHeader.style.marginTop = '0';
+        holdingsContainer.appendChild(holdingsHeader);
         for (const h of data.holdings) {
-          holdingsHtml += `<div class="holdings-item"><span>${h.collection}</span><span class="holdings-count">${h.count}</span></div>`;
+          holdingsContainer.appendChild(createHoldingItem(h.collection, h.count));
         }
-        document.getElementById('holdingsResults').innerHTML = holdingsHtml;
 
-        let rolesHtml = '<h3 style="margin:16px 0 8px;font-size:14px;color:#888">ROLES ASSIGNED</h3>';
+        // Roles — safe DOM construction
+        const rolesContainer = document.getElementById('rolesResults');
+        rolesContainer.innerHTML = '';
+        rolesContainer.appendChild(createSectionHeader('ROLES ASSIGNED'));
         if (data.roles_assigned.length === 0) {
-          rolesHtml += '<div class="no-roles">No qualifying roles found. You need to hold NFTs from the supported collections.</div>';
+          const noRoles = document.createElement('div');
+          noRoles.className = 'no-roles';
+          noRoles.textContent = 'No qualifying roles found. You need to hold NFTs from the supported collections.';
+          rolesContainer.appendChild(noRoles);
         } else {
           for (const r of data.roles_assigned) {
-            rolesHtml += `<div class="role-item"><span class="role-badge">${r.role}</span><span class="role-info">${r.collection} · ${r.count} held</span></div>`;
+            rolesContainer.appendChild(createRoleItem(r.role, r.collection, r.count));
           }
         }
-        document.getElementById('rolesResults').innerHTML = rolesHtml;
         document.getElementById('step3').classList.add('done');
 
       } catch (err) {
